@@ -1,10 +1,7 @@
 package queries
 
 import (
-	"database/sql"
 	"strconv"
-
-	project_errors "github.com/saeedsamimi/authentication-service/errors"
 )
 
 var (
@@ -20,26 +17,3 @@ var (
 		return baseQuery + `;`
 	}
 )
-
-func CreateAuthEntry(db *sql.DB) (*sql.Stmt, error) {
-	stmt, err := db.Prepare(CreateAuthEntryQuery)
-	if err != nil {
-		return nil, &project_errors.PrepareError{
-			Query: CreateAuthEntryQuery,
-			Err:   err,
-		}
-	}
-	return stmt, nil
-}
-
-func GetAuthEntryBy(db *sql.DB, fields []string) (*sql.Stmt, error) {
-	query := GetAuthEntryQuery(fields)
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return nil, &project_errors.PrepareError{
-			Query: query,
-			Err:   err,
-		}
-	}
-	return stmt, nil
-}

@@ -31,8 +31,7 @@ func TestAuthEntryModel(t *testing.T) {
 		expectedID := "auth123"
 		expectedTime := time.Now()
 
-		mock.ExpectPrepare("INSERT INTO auth_entries").
-			ExpectQuery().
+		mock.ExpectQuery("INSERT INTO auth_entries").
 			WithArgs(entry.UserId, entry.Email, entry.Password).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at", "last_login"}).
 				AddRow(expectedID, expectedTime, expectedTime, sql.NullTime{}))
@@ -54,8 +53,7 @@ func TestAuthEntryModel(t *testing.T) {
 			Password: "password123",
 		}
 
-		mock.ExpectPrepare("INSERT INTO auth_entries").
-			ExpectQuery().
+		mock.ExpectQuery("INSERT INTO auth_entries").
 			WithArgs(entry.UserId, entry.Email, entry.Password).
 			WillReturnError(&pq.Error{Code: "23505"})
 
@@ -86,8 +84,7 @@ func TestAuthEntryModel(t *testing.T) {
 			Email:  &email,
 		}
 
-		mock.ExpectPrepare("SELECT .+ FROM auth_entries .+ \\$1 .+ \\$2").
-			ExpectQuery().
+		mock.ExpectQuery("SELECT .+ FROM auth_entries .+ \\$1 .+ \\$2").
 			WithArgs(userID, email).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "email", "password", "created_at", "updated_at", "last_login"}).
 				AddRow(expectedEntry.ID, expectedEntry.UserId, expectedEntry.Email, expectedEntry.Password,
@@ -117,8 +114,7 @@ func TestAuthEntryModel(t *testing.T) {
 			UserId: &userID,
 		}
 
-		mock.ExpectPrepare("SELECT (.+) FROM auth_entries").
-			ExpectQuery().
+		mock.ExpectQuery("SELECT (.+) FROM auth_entries").
 			WithArgs(userID).
 			WillReturnError(sql.ErrNoRows)
 
