@@ -2,15 +2,6 @@ package project_errors
 
 import "fmt"
 
-const (
-	// ErrCodePrepare is the error code for prepare errors.
-	ErrCodePrepare         = "prepare_error"
-	ErrCodeInvalidArgument = "invalid_argument"
-
-	ErrCodeAlreadyExists = "already_exists"
-	ErrCodeNotFound      = "not_found"
-)
-
 type ModelError struct {
 	Code  string
 	Model string

@@ -28,13 +28,18 @@ type AuthEntryCreate struct {
 }
 
 type AuthEntryModel struct {
-	DB *sql.DB
+	db *sql.DB
+}
+
+type IAuthEntryModel interface {
+	Create(entry AuthEntryCreate) (*AuthEntry, error)
+	Get(query AuthEntryQuery) (*AuthEntry, error)
 }
 
 const name = "AuthEntryModel"
 
 func NewAuthEntryModel(db *sql.DB) *AuthEntryModel {
-	return &AuthEntryModel{DB: db}
+	return &AuthEntryModel{db: db}
 }
 
 func (m *AuthEntryModel) Create(entry AuthEntryCreate) (*AuthEntry, error) {
@@ -46,7 +51,7 @@ func (m *AuthEntryModel) Create(entry AuthEntryCreate) (*AuthEntry, error) {
 		Password: entry.Password,
 	}
 
-	err := m.DB.QueryRow(query, entry.UserId, entry.Email, entry.Password).Scan(
+	err := m.db.QueryRow(query, entry.UserId, entry.Email, entry.Password).Scan(
 		&authEntry.ID,
 		&authEntry.CreatedAt,
 		&authEntry.UpdatedAt,
@@ -109,7 +114,7 @@ func (m *AuthEntryModel) Get(query AuthEntryQuery) (*AuthEntry, error) {
 		args[i] = *v
 	}
 
-	err := m.DB.QueryRow(dbQuery, args...).Scan(
+	err := m.db.QueryRow(dbQuery, args...).Scan(
 		&authEntry.ID,
 		&authEntry.UserId,
 		&authEntry.Email,
