@@ -2,6 +2,7 @@ package queries
 
 import (
 	"database/sql"
+	"strconv"
 
 	"github.com/saeedsamimi/authentication-service/errors"
 )
@@ -14,7 +15,7 @@ var (
 			if i > 0 {
 				baseQuery += " AND "
 			}
-			baseQuery += field + ` = $` + string(i+1)
+			baseQuery += field + ` = $` + strconv.Itoa(i+1)
 		}
 		return baseQuery + `;`
 	}
