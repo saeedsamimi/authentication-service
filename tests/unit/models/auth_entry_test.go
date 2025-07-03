@@ -64,7 +64,7 @@ func TestAuthEntryModel(t *testing.T) {
 		result, err := model.Create(entry)
 
 		assert.ErrorAs(t, err, &expectedErr)
-		assert.Equal(t, err.(*project_errors.ModelError).Code, project_errors.ErrCodeAleadyExists)
+		assert.Equal(t, err.(*project_errors.ModelError).Code, project_errors.ErrCodeAlreadyExists)
 		assert.Nil(t, result)
 	})
 

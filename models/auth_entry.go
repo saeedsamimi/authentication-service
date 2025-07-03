@@ -59,9 +59,9 @@ func (m *AuthEntryModel) Create(entry AuthEntryCreate) (*AuthEntry, error) {
 	if err != nil {
 		var pqError *pq.Error
 		if errors.As(err, &pqError) {
-			if pqError.Code == "23505" { // Unique violation
+			if pqError.Code.Name() == "unique_violation" { // Unique violation
 				return nil, &project_errors.ModelError{
-					Code:  project_errors.ErrCodeAleadyExists,
+					Code:  project_errors.ErrCodeAlreadyExists,
 					Model: name,
 					Err:   err,
 				}
