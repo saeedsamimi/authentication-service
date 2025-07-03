@@ -86,7 +86,7 @@ func TestAuthEntryModel(t *testing.T) {
 			Email:  &email,
 		}
 
-		mock.ExpectPrepare("SELECT .+ FROM auth_entries").
+		mock.ExpectPrepare("SELECT .+ FROM auth_entries .+ \\$1 .+ \\$2").
 			ExpectQuery().
 			WithArgs(userID, email).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "email", "password", "created_at", "updated_at", "last_login"}).
