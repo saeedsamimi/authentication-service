@@ -38,10 +38,7 @@ func NewAuthEntryModel(db *sql.DB) *AuthEntryModel {
 }
 
 func (m *AuthEntryModel) Create(entry AuthEntryCreate) (*AuthEntry, error) {
-	stmt, err := queries.CreateAuthEntry(m.DB)
-	if err != nil {
-		return nil, err
-	}
+	query := queries.CreateAuthEntryQuery
 
 	var authEntry AuthEntry = AuthEntry{
 		UserId:   entry.UserId,
@@ -49,7 +46,7 @@ func (m *AuthEntryModel) Create(entry AuthEntryCreate) (*AuthEntry, error) {
 		Password: entry.Password,
 	}
 
-	err = stmt.QueryRow(entry.UserId, entry.Email, entry.Password).Scan(
+	err := m.DB.QueryRow(query, entry.UserId, entry.Email, entry.Password).Scan(
 		&authEntry.ID,
 		&authEntry.CreatedAt,
 		&authEntry.UpdatedAt,
@@ -104,10 +101,7 @@ func (m *AuthEntryModel) Get(query AuthEntryQuery) (*AuthEntry, error) {
 		}
 	}
 
-	stmt, err := queries.GetAuthEntryBy(m.DB, fields)
-	if err != nil {
-		return nil, err
-	}
+	dbQuery := queries.GetAuthEntryQuery(fields)
 
 	var authEntry AuthEntry
 	args := make([]any, len(qs))
@@ -115,7 +109,7 @@ func (m *AuthEntryModel) Get(query AuthEntryQuery) (*AuthEntry, error) {
 		args[i] = *v
 	}
 
-	err = stmt.QueryRow(args...).Scan(
+	err := m.DB.QueryRow(dbQuery, args...).Scan(
 		&authEntry.ID,
 		&authEntry.UserId,
 		&authEntry.Email,
