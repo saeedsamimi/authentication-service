@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/saeedsamimi/authentication-service/errors"
 	"github.com/saeedsamimi/authentication-service/queries"
 )
 
@@ -26,6 +27,8 @@ type AuthEntryCreate struct {
 type AuthEntryModel struct {
 	DB *sql.DB
 }
+
+const name = "AuthEntryModel"
 
 func NewAuthEntryModel(db *sql.DB) *AuthEntryModel {
 	return &AuthEntryModel{DB: db}
@@ -51,6 +54,64 @@ func (m *AuthEntryModel) Create(entry AuthEntryCreate) (*AuthEntry, error) {
 	)
 
 	if err != nil {
+		return nil, err
+	}
+
+	return &authEntry, nil
+}
+
+type AuthEntryQuery struct {
+	ID     *string
+	UserId *string
+	Email  *string
+}
+
+func (m *AuthEntryModel) Get(query AuthEntryQuery) (*AuthEntry, error) {
+	fields := []string{}
+	qs := []*string{}
+
+	if query.ID != nil {
+		fields = append(fields, "id")
+		qs = append(qs, query.ID)
+	}
+	if query.UserId != nil {
+		fields = append(fields, "user_id")
+		qs = append(qs, query.UserId)
+	}
+	if query.Email != nil {
+		fields = append(fields, "email")
+		qs = append(qs, query.Email)
+	}
+
+	stmt, err := queries.GetAuthEntryBy(m.DB, fields)
+	if err != nil {
+		return nil, err
+	}
+
+	var authEntry AuthEntry
+	args := make([]any, len(qs))
+	for i, v := range qs {
+		args[i] = *v
+	}
+
+	err = stmt.QueryRow(args...).Scan(
+		&authEntry.ID,
+		&authEntry.UserId,
+		&authEntry.Email,
+		&authEntry.Password,
+		&authEntry.CreatedAt,
+		&authEntry.UpdatedAt,
+		&authEntry.LastLogin,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, &errors.ModelError{
+				Code:  errors.ErrCodeNotFound,
+				Model: name,
+				Err:   err,
+			}
+		}
 		return nil, err
 	}
 
