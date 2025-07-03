@@ -1,4 +1,4 @@
-package errors
+package project_errors
 
 type PrepareError struct {
 	Query string

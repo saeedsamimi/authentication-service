@@ -2,9 +2,12 @@ package models
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/saeedsamimi/authentication-service/errors"
+	"github.com/lib/pq"
+	project_errors "github.com/saeedsamimi/authentication-service/errors"
 	"github.com/saeedsamimi/authentication-service/queries"
 )
 
@@ -54,6 +57,16 @@ func (m *AuthEntryModel) Create(entry AuthEntryCreate) (*AuthEntry, error) {
 	)
 
 	if err != nil {
+		var pqError *pq.Error
+		if errors.As(err, &pqError) {
+			if pqError.Code == "23505" { // Unique violation
+				return nil, &project_errors.ModelError{
+					Code:  project_errors.ErrCodeAleadyExists,
+					Model: name,
+					Err:   err,
+				}
+			}
+		}
 		return nil, err
 	}
 
@@ -83,6 +96,14 @@ func (m *AuthEntryModel) Get(query AuthEntryQuery) (*AuthEntry, error) {
 		qs = append(qs, query.Email)
 	}
 
+	if len(fields) == 0 {
+		return nil, &project_errors.ModelError{
+			Code:  project_errors.ErrCodeInvalidArgument,
+			Model: name,
+			Err:   fmt.Errorf("at least one field must be specified for query"),
+		}
+	}
+
 	stmt, err := queries.GetAuthEntryBy(m.DB, fields)
 	if err != nil {
 		return nil, err
@@ -106,8 +127,8 @@ func (m *AuthEntryModel) Get(query AuthEntryQuery) (*AuthEntry, error) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, &errors.ModelError{
-				Code:  errors.ErrCodeNotFound,
+			return nil, &project_errors.ModelError{
+				Code:  project_errors.ErrCodeNotFound,
 				Model: name,
 				Err:   err,
 			}

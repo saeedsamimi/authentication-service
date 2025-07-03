@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/lib/pq"
+	project_errors "github.com/saeedsamimi/authentication-service/errors"
 	"github.com/saeedsamimi/authentication-service/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,6 +47,27 @@ func TestAuthEntryModel(t *testing.T) {
 		assert.Equal(t, entry.Password, result.Password)
 	})
 
+	t.Run("Create_AlreadyExists", func(t *testing.T) {
+		entry := models.AuthEntryCreate{
+			UserId:   "user123",
+			Email:    "email@email.com",
+			Password: "password123",
+		}
+
+		mock.ExpectPrepare("INSERT INTO auth_entries").
+			ExpectQuery().
+			WithArgs(entry.UserId, entry.Email, entry.Password).
+			WillReturnError(&pq.Error{Code: "23505"})
+
+		var expectedErr *project_errors.ModelError
+
+		result, err := model.Create(entry)
+
+		assert.ErrorAs(t, err, &expectedErr)
+		assert.Equal(t, err.(*project_errors.ModelError).Code, project_errors.ErrCodeAleadyExists)
+		assert.Nil(t, result)
+	})
+
 	t.Run("Get", func(t *testing.T) {
 		userID := "user123"
 		email := "test@example.com"
@@ -77,6 +100,15 @@ func TestAuthEntryModel(t *testing.T) {
 		assert.Equal(t, expectedEntry.ID, result.ID)
 		assert.Equal(t, expectedEntry.UserId, result.UserId)
 		assert.Equal(t, expectedEntry.Email, result.Email)
+	})
+
+	t.Run("Get_NoArgs", func(t *testing.T) {
+		query := models.AuthEntryQuery{}
+
+		result, err := model.Get(query)
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "at least one field must be specified for query")
+		assert.Nil(t, result)
 	})
 
 	t.Run("Get_NotFound", func(t *testing.T) {

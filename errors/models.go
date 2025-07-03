@@ -1,10 +1,11 @@
-package errors
+package project_errors
 
 import "fmt"
 
 const (
 	// ErrCodePrepare is the error code for prepare errors.
-	ErrCodePrepare = "prepare_error"
+	ErrCodePrepare         = "prepare_error"
+	ErrCodeInvalidArgument = "invalid_argument"
 
 	ErrCodeAleadyExists = "already_exists"
 	ErrCodeNotFound     = "not_found"
