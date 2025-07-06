@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -32,8 +33,8 @@ type AuthEntryModel struct {
 }
 
 type IAuthEntryModel interface {
-	Create(entry AuthEntryCreate) (*AuthEntry, error)
-	Get(query AuthEntryQuery) (*AuthEntry, error)
+	Create(ctx context.Context, entry AuthEntryCreate) (*AuthEntry, error)
+	Get(ctx context.Context, query AuthEntryQuery) (*AuthEntry, error)
 }
 
 const name = "AuthEntryModel"
@@ -42,7 +43,7 @@ func NewAuthEntryModel(db *sql.DB) *AuthEntryModel {
 	return &AuthEntryModel{db: db}
 }
 
-func (m *AuthEntryModel) Create(entry AuthEntryCreate) (*AuthEntry, error) {
+func (m *AuthEntryModel) Create(ctx context.Context, entry AuthEntryCreate) (*AuthEntry, error) {
 	query := queries.CreateAuthEntryQuery
 
 	var authEntry AuthEntry = AuthEntry{
@@ -51,7 +52,7 @@ func (m *AuthEntryModel) Create(entry AuthEntryCreate) (*AuthEntry, error) {
 		Password: entry.Password,
 	}
 
-	err := m.db.QueryRow(query, entry.UserId, entry.Email, entry.Password).Scan(
+	err := m.db.QueryRowContext(ctx, query, entry.UserId, entry.Email, entry.Password).Scan(
 		&authEntry.ID,
 		&authEntry.CreatedAt,
 		&authEntry.UpdatedAt,
@@ -81,7 +82,7 @@ type AuthEntryQuery struct {
 	Email  *string
 }
 
-func (m *AuthEntryModel) Get(query AuthEntryQuery) (*AuthEntry, error) {
+func (m *AuthEntryModel) Get(ctx context.Context, query AuthEntryQuery) (*AuthEntry, error) {
 	fields := []string{}
 	qs := []*string{}
 
@@ -114,7 +115,7 @@ func (m *AuthEntryModel) Get(query AuthEntryQuery) (*AuthEntry, error) {
 		args[i] = *v
 	}
 
-	err := m.db.QueryRow(dbQuery, args...).Scan(
+	err := m.db.QueryRowContext(ctx, dbQuery, args...).Scan(
 		&authEntry.ID,
 		&authEntry.UserId,
 		&authEntry.Email,

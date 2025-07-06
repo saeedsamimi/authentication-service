@@ -1,10 +1,13 @@
 package repositories_test
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/go-redis/redismock/v9"
 
 	project_errors "github.com/saeedsamimi/authentication-service/errors"
 	"github.com/saeedsamimi/authentication-service/models"
@@ -19,20 +22,23 @@ type mockedAuthEntryModel struct {
 	DoGet    func(t *testing.T, query models.AuthEntryQuery) (*models.AuthEntry, error)
 }
 
-func (m *mockedAuthEntryModel) Create(entry models.AuthEntryCreate) (*models.AuthEntry, error) {
+func (m *mockedAuthEntryModel) Create(ctx context.Context, entry models.AuthEntryCreate) (*models.AuthEntry, error) {
 	return m.DoCreate(m.t, entry)
 }
 
-func (m *mockedAuthEntryModel) Get(query models.AuthEntryQuery) (*models.AuthEntry, error) {
+func (m *mockedAuthEntryModel) Get(ctx context.Context, query models.AuthEntryQuery) (*models.AuthEntry, error) {
 	return m.DoGet(m.t, query)
 }
 
 func TestAuthEntryRepository(t *testing.T) {
+	var ctx = context.TODO()
+
+	db, redisMockClient := redismock.NewClientMock()
 	mockedModel := &mockedAuthEntryModel{
 		t: t,
 	}
 
-	repo := repositories.NewAuthEntryRepository(mockedModel)
+	repo := repositories.NewAuthEntryRepository(mockedModel, db)
 
 	t.Run("Create", func(t *testing.T) {
 		expectedOutput := &models.AuthEntry{
@@ -49,26 +55,39 @@ func TestAuthEntryRepository(t *testing.T) {
 			assert.Equal(t, expectedOutput.UserId, entry.UserId, "Expected UserId to match")
 			assert.Equal(t, expectedOutput.Email, entry.Email, "Expected Email to match")
 			assert.NoError(t, bcrypt.CompareHashAndPassword([]byte(entry.Password), []byte(expectedOutput.Password)), "Expected Password to be hashed correctly")
+			expectedHash := map[string]string{
+				"ID":        expectedOutput.ID,
+				"UserId":    expectedOutput.UserId,
+				"Email":     expectedOutput.Email,
+				"Password":  entry.Password,
+				"CreatedAt": expectedOutput.CreatedAt.Format(time.RFC3339),
+				"UpdatedAt": expectedOutput.UpdatedAt.Format(time.RFC3339),
+				"LastLogin": "",
+			}
+			redisMockClient.ExpectHSet(expectedOutput.ID, expectedHash).SetVal(7)
 			expectedOutput.Password = "..."
 			return &models.AuthEntry{
-				ID:        entry.UserId,
+				ID:        expectedOutput.ID,
 				UserId:    entry.UserId,
 				Email:     entry.Email,
 				Password:  entry.Password,
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
+				CreatedAt: expectedOutput.CreatedAt,
+				UpdatedAt: expectedOutput.UpdatedAt,
 				LastLogin: sql.NullTime{},
 			}, nil
 		}
 
-		result, err := repo.Create(&models.AuthEntryCreate{
+		result, err := repo.Create(ctx, &models.AuthEntryCreate{
 			UserId:   expectedOutput.UserId,
 			Email:    expectedOutput.Email,
 			Password: expectedOutput.Password,
 		})
 
 		assert.NoError(t, err, "Expected no error on Create")
-		assert.Equal(t, expectedOutput.UserId, result.UserId, "Expected UserId to match")
+		assert.Equal(t, expectedOutput, result, "Expected UserId to match")
+		assert.Eventually(t, func() bool {
+			return redisMockClient.ExpectationsWereMet() == nil
+		}, 1*time.Second, 10*time.Millisecond, "Expected Redis cache to be updated")
 	})
 
 	t.Run("Create_AlreadyExists", func(t *testing.T) {
@@ -80,7 +99,7 @@ func TestAuthEntryRepository(t *testing.T) {
 			}
 		}
 
-		_, err := repo.Create(&models.AuthEntryCreate{
+		_, err := repo.Create(ctx, &models.AuthEntryCreate{
 			UserId:   "test-user-id",
 			Email:    "example.com",
 			Password: "SecurePassword123",
@@ -97,7 +116,7 @@ func TestAuthEntryRepository(t *testing.T) {
 			return nil, fmt.Errorf("process error")
 		}
 
-		_, err := repo.Create(&models.AuthEntryCreate{
+		_, err := repo.Create(ctx, &models.AuthEntryCreate{
 			UserId:   "test-user-id",
 			Email:    "example.com",
 			Password: "SecurePassword123",
@@ -108,4 +127,8 @@ func TestAuthEntryRepository(t *testing.T) {
 		assert.ErrorAs(t, err, &repoErr, "Expected error to be of type RepositoryError")
 		assert.Equal(t, project_errors.ErrCodeProcessError, repoErr.Code, "Expected error code to be ErrCodeProcessError")
 	})
+
+	if err := redisMockClient.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
 }

@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -20,6 +21,7 @@ func TestAuthEntryModel(t *testing.T) {
 	defer db.Close()
 
 	model := models.NewAuthEntryModel(db)
+	ctx := context.TODO()
 
 	t.Run("Create", func(t *testing.T) {
 		entry := models.AuthEntryCreate{
@@ -36,7 +38,7 @@ func TestAuthEntryModel(t *testing.T) {
 			WillReturnRows(sqlmock.NewRows([]string{"id", "created_at", "updated_at", "last_login"}).
 				AddRow(expectedID, expectedTime, expectedTime, sql.NullTime{}))
 
-		result, err := model.Create(entry)
+		result, err := model.Create(ctx, entry)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -59,7 +61,7 @@ func TestAuthEntryModel(t *testing.T) {
 
 		var expectedErr *project_errors.ModelError
 
-		result, err := model.Create(entry)
+		result, err := model.Create(ctx, entry)
 
 		assert.ErrorAs(t, err, &expectedErr)
 		assert.Equal(t, err.(*project_errors.ModelError).Code, project_errors.ErrCodeAlreadyExists)
@@ -90,7 +92,7 @@ func TestAuthEntryModel(t *testing.T) {
 				AddRow(expectedEntry.ID, expectedEntry.UserId, expectedEntry.Email, expectedEntry.Password,
 					expectedEntry.CreatedAt, expectedEntry.UpdatedAt, expectedEntry.LastLogin))
 
-		result, err := model.Get(query)
+		result, err := model.Get(ctx, query)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -102,7 +104,7 @@ func TestAuthEntryModel(t *testing.T) {
 	t.Run("Get_NoArgs", func(t *testing.T) {
 		query := models.AuthEntryQuery{}
 
-		result, err := model.Get(query)
+		result, err := model.Get(ctx, query)
 		assert.Error(t, err)
 		assert.ErrorContains(t, err, "at least one field must be specified for query")
 		assert.Nil(t, result)
@@ -118,7 +120,7 @@ func TestAuthEntryModel(t *testing.T) {
 			WithArgs(userID).
 			WillReturnError(sql.ErrNoRows)
 
-		result, err := model.Get(query)
+		result, err := model.Get(ctx, query)
 
 		assert.Error(t, err)
 		assert.Nil(t, result)
